@@ -257,8 +257,8 @@ test('isProblem accepts only known codes', () => {
 test('PRIVACY.md lists exactly the requests tweetmuff filters', async () => {
   const doc = await Bun.file(new URL('../PRIVACY.md', import.meta.url)).text();
   const section = doc.slice(doc.indexOf('**User activity**'), doc.indexOf("tweetmuff doesn't handle"));
-  const documented = [...section.matchAll(/`([A-Z]\w+)`/g)].map((m) => m[1]);
+  const documented = [...section.matchAll(/`x\.com\/i\/api\/graphql\/\{ID\}\/(\w+)`/g)].map((m) => m[1]);
   expect([...documented].sort()).toEqual([...core.filteredOperations].sort());
-  expect(section).toContain('`https://x.com/i/api/1.1/search/typeahead.json`');
-  expect(section).toContain('`https://x.com/i/api/1.1/mutes/keywords/list.json`');
+  expect(section).toContain('`x.com/i/api/1.1/search/typeahead.json`');
+  expect(section).toContain('`x.com/i/api/1.1/mutes/keywords/list.json`');
 });

@@ -13,18 +13,34 @@ tweetmuff works only on x.com. It handles the data below only to filter posts an
   - Search results, and search suggestions (topics, hashtags, and events)
   - Trends and Explore news cards
   - Your muted-word list on X, when X's web app loads it (for example on Settings › Muted words), to know which words to filter
-- **User activity**: tweetmuff watches the requests X's web app makes and checks their addresses to find the ones below. It reads only the responses to those, and every other request is left alone.
-  - GraphQL requests to `https://x.com/i/api/graphql/{ID}/{operation}` (the ID changes with X's updates) for these operations:
-    - Home timeline: `HomeTimeline`, `HomeLatestTimeline`
-    - Replies and "Discover more": `TweetDetail`
-    - Search results: `SearchTimeline`
-    - Profiles: `UserTweets`, `UserTweetsAndReplies`, `UserMedia`, `Likes`, `UserHighlightsTweets`, `UserArticlesTweets`, `UserOriginalsTimeline`, `UserRepliesTimeline`, `UserRepostsTimeline`, `UserPhotoTimeline`, `UserVideoTimeline`, `UserSuperFollowTweets`
-    - Lists: `ListLatestTweetsTimeline`, `ListRankedTweetsTimeline`
-    - Bookmarks: `Bookmarks`, `BookmarkFolderTimeline`, `BookmarkSearchTimeline`
-    - Explore and trends: `ExplorePage`, `ExploreSidebar`, `GenericTimelineById`
-    - Notifications: `NotificationsTimeline`
-  - `https://x.com/i/api/1.1/search/typeahead.json`: search suggestions
-  - `https://x.com/i/api/1.1/mutes/keywords/list.json`: your muted-word list, to import it
+- **User activity**: tweetmuff watches the requests X's web app makes and checks their addresses to find the ones below. It reads only the responses to those, and every other request is left alone. `{ID}` stands for an identifier that changes with X's updates.
+  - `x.com/i/api/graphql/{ID}/HomeTimeline`: home timeline (For you)
+  - `x.com/i/api/graphql/{ID}/HomeLatestTimeline`: home timeline (Following)
+  - `x.com/i/api/graphql/{ID}/TweetDetail`: a post's replies and "Discover more"
+  - `x.com/i/api/graphql/{ID}/SearchTimeline`: search results
+  - `x.com/i/api/graphql/{ID}/UserTweets`: a profile's posts
+  - `x.com/i/api/graphql/{ID}/UserTweetsAndReplies`: a profile's posts and replies
+  - `x.com/i/api/graphql/{ID}/UserMedia`: a profile's media
+  - `x.com/i/api/graphql/{ID}/Likes`: a profile's likes
+  - `x.com/i/api/graphql/{ID}/UserHighlightsTweets`: a profile's highlights
+  - `x.com/i/api/graphql/{ID}/UserArticlesTweets`: a profile's articles
+  - `x.com/i/api/graphql/{ID}/UserOriginalsTimeline`: a profile's original posts
+  - `x.com/i/api/graphql/{ID}/UserRepliesTimeline`: a profile's replies
+  - `x.com/i/api/graphql/{ID}/UserRepostsTimeline`: a profile's reposts
+  - `x.com/i/api/graphql/{ID}/UserPhotoTimeline`: a profile's photos
+  - `x.com/i/api/graphql/{ID}/UserVideoTimeline`: a profile's videos
+  - `x.com/i/api/graphql/{ID}/UserSuperFollowTweets`: a profile's subscriber-only posts
+  - `x.com/i/api/graphql/{ID}/ListLatestTweetsTimeline`: a list's latest posts
+  - `x.com/i/api/graphql/{ID}/ListRankedTweetsTimeline`: a list's top posts
+  - `x.com/i/api/graphql/{ID}/Bookmarks`: your bookmarks
+  - `x.com/i/api/graphql/{ID}/BookmarkFolderTimeline`: a bookmark folder
+  - `x.com/i/api/graphql/{ID}/BookmarkSearchTimeline`: bookmark search results
+  - `x.com/i/api/graphql/{ID}/ExplorePage`: the Explore page
+  - `x.com/i/api/graphql/{ID}/ExploreSidebar`: trends and news in the sidebar
+  - `x.com/i/api/graphql/{ID}/GenericTimelineById`: Explore tabs and trend timelines
+  - `x.com/i/api/graphql/{ID}/NotificationsTimeline`: notifications
+  - `x.com/i/api/1.1/search/typeahead.json`: search suggestions
+  - `x.com/i/api/1.1/mutes/keywords/list.json`: your muted-word list, to import it
 
 tweetmuff doesn't handle health, financial or payment, authentication, personal communications, location, or web history data. It reads no passwords, auth cookies, tokens, or request headers, doesn't touch direct messages, and keeps no list of the pages you visit.
 
