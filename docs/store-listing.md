@@ -37,7 +37,7 @@ Features:
 
 Privacy:
 - tweetmuff never sends requests to X or any other server. It only reads responses that X's own web app has already requested.
-- Your muted words and settings stay on your device.
+- Your muted words and settings stay in your browser.
 - No analytics, no tracking, no remote code.
 
 tweetmuff is an independent project and is not affiliated with or endorsed by X Corp.
@@ -68,7 +68,7 @@ The dashboard asks for a justification for each permission and for host access.
 `storage`:
 
 ```
-Stores the user's settings and muted-word list (imported from the user's own X mute settings, plus any words added on the settings page) locally on the device, so the filter keeps working across browser sessions. It also keeps a short log of problems the filter ran into, recorded only as fixed codes (affected feature, step, error type, extension version, count, and date). The log contains no page content or any other data, and is shown in the Status section of the settings page.
+Stores the user's settings and muted-word list (imported from the user's own X mute settings, plus any words added on the settings page) locally in the browser, so the filter keeps working across browser sessions. It also keeps a short log of problems the filter ran into, recorded only as fixed codes (affected feature, step, error type, extension version, count, and date). The log contains no page content or any other data, and is shown in the Status section of the settings page.
 ```
 
 Host access (content scripts on `https://x.com/*`):
@@ -85,7 +85,7 @@ No. All code is included in the extension package. Nothing is fetched or evaluat
 
 ### Data usage disclosure
 
-Chrome Web Store policy requires disclosing data that is handled locally, even if it is never transmitted (User Data FAQ, Q3). tweetmuff never transmits anything, but it does handle the following on the device. Under-disclosing is a policy violation while over-disclosing isn't, so borderline categories are disclosed. Keep this table, PRIVACY.md, and the extension's behavior in sync.
+Chrome Web Store policy requires disclosing data that is handled locally, even if it is never transmitted (User Data FAQ, Q3). tweetmuff never transmits anything, but it does handle the following in the browser. Under-disclosing is a policy violation while over-disclosing isn't, so borderline categories are disclosed. Keep this table, PRIVACY.md, and the extension's behavior in sync.
 
 | Category | Collected? | What and why |
 | --- | --- | --- |

@@ -44,15 +44,15 @@ tweetmuff works only on x.com. It handles the data below only to filter posts an
 
 tweetmuff doesn't handle health, financial or payment, authentication, personal communications, location, or web history data. It reads no passwords, auth cookies, tokens, or request headers, doesn't touch direct messages, and keeps no list of the pages you visit.
 
-## Stored on your device
+## Stored in your browser
 
-In the extension's storage on your device:
+In the extension's storage in your browser:
 
 - Your settings (on/off, "apply to accounts you follow") and the extra muted words you add on the settings page
 - The muted-word list imported from X
 - A short problem log: when tweetmuff runs into a problem, it saves a fixed code such as `home/entries/TypeError`, with the extension version, how often it happened, and when. It holds no messages, posts, words, links, or account details. You can see it in the Status section of the settings page, copy it to report a problem, or clear it.
 
-A copy of your settings and words is also kept in x.com's site data on your device, so the filter is ready as soon as the page starts loading.
+A copy of your settings and words is also kept in x.com's site data in your browser, so the filter is ready as soon as the page starts loading.
 
 Nothing else is stored. In particular, your account ID, the posts tweetmuff reads, and X's requests are never stored.
 
@@ -62,7 +62,7 @@ tweetmuff's use of the data above complies with the Chrome Web Store User Data P
 
 ## Permissions
 
-- `storage`: saves your settings, muted words, and problem log on your device.
+- `storage`: saves your settings, muted words, and problem log in your browser.
 - Content scripts on `https://x.com/*`: filter posts on X.
 
 tweetmuff uses no third-party services (analytics, error reporting, advertising, or tracking) and loads no remote code.
