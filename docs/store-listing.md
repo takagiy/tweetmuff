@@ -37,7 +37,7 @@ Features:
 
 Privacy:
 - tweetmuff never sends requests to X or any other server. It only reads responses that X's own web app has already requested.
-- Your muted words and settings stay in your browser.
+- Your muted words and settings stay on your device.
 - No analytics, no tracking, no remote code.
 
 tweetmuff is an independent project and is not affiliated with or endorsed by X Corp.
