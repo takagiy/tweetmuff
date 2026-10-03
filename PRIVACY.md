@@ -6,14 +6,14 @@
 tweetmuff works only on x.com. It handles the data below only to filter posts and to show its own status on its settings page. It never sends anything anywhere: it makes no network requests of its own and has no server.
 
 - **Personally identifiable information**
-  - X account ID (the numeric ID in X's `twid` cookie): read so that your own posts are never hidden. tweetmuff reads only this one cookie and uses the ID only while the page is open. It's never stored or sent.
-- **Website content**: read in the page before X displays it, to remove items that contain your muted words. Nothing here is stored or sent, except your muted-word list.
+  - X account ID (the numeric ID in X's `twid` cookie): read so that your own posts are never hidden. tweetmuff reads only this one cookie.
+- **Website content**: read in the page before X displays it, to remove items that contain your muted words.
   - Posts in timelines: home, profiles, lists, bookmarks, and notifications
   - Replies and "Discover more" under a post
   - Search results, and search suggestions (topics, hashtags, and events)
   - Trends and Explore news cards
-  - Your muted-word list on X, when X's web app loads it (for example on Settings › Muted words). The words and their options are saved on your device (see [Stored on your device](#stored-on-your-device)).
-- **User activity**: tweetmuff watches the requests X's web app makes and checks their addresses to find the ones below. It reads only the responses to those, and every other request is left alone. The requests themselves aren't recorded.
+  - Your muted-word list on X, when X's web app loads it (for example on Settings › Muted words), to know which words to filter
+- **User activity**: tweetmuff watches the requests X's web app makes and checks their addresses to find the ones below. It reads only the responses to those, and every other request is left alone.
   - GraphQL requests to `https://x.com/i/api/graphql/{ID}/{operation}` (the ID changes with X's updates) for these operations:
     - Home timeline: `HomeTimeline`, `HomeLatestTimeline`
     - Replies and "Discover more": `TweetDetail`
@@ -37,6 +37,8 @@ In the extension's storage on your device:
 - A short problem log: when tweetmuff runs into a problem, it saves a fixed code such as `home/entries/TypeError`, with the extension version, how often it happened, and when. It holds no messages, posts, words, links, or account details. You can see it in the Status section of the settings page, copy it to report a problem, or clear it.
 
 A copy of your settings and words is also kept in x.com's site data on your device, so the filter is ready as soon as the page starts loading.
+
+Nothing else is stored. In particular, your account ID, the posts tweetmuff reads, and X's requests are never stored.
 
 ## Limited Use
 
