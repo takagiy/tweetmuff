@@ -34,7 +34,7 @@ In the extension's storage on your device:
 
 - Your settings (on/off, "apply to accounts you follow") and the extra muted words you add on the settings page
 - The muted-word list imported from X
-- A short problem log. If tweetmuff can't read part of X's data, for example after X changes its format, it shows that part as X sent it, without filtering, and saves a fixed code such as `home/entries/TypeError`, with the extension version, how often it happened, and when. It holds no messages, posts, words, links, or account details. You can see it in the Status section of the settings page, copy it to report a problem, or clear it.
+- A short problem log: when tweetmuff runs into a problem, it saves a fixed code such as `home/entries/TypeError`, with the extension version, how often it happened, and when. It holds no messages, posts, words, links, or account details. You can see it in the Status section of the settings page, copy it to report a problem, or clear it.
 
 A copy of your settings and words is also kept in x.com's site data on your device, so the filter is ready as soon as the page starts loading.
 
