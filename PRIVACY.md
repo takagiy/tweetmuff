@@ -13,7 +13,7 @@ tweetmuff works only on x.com. It handles the data below only to filter posts an
   - Search results, and search suggestions (topics, hashtags, and events)
   - Trends and Explore news cards
   - Your muted-word list on X, when X's web app loads it (for example on Settings › Muted words), to know which words to filter
-- **User activity**: tweetmuff watches the requests X's web app makes and checks their addresses to find the ones below. It reads only the responses to those, and every other request is left alone. `{ID}` stands for an identifier that changes with X's updates.
+- **User activity**: tweetmuff checks the addresses of the requests X's web app makes to find the ones below, and removes items that contain your muted words from their responses. Every other request is left alone. `{ID}` stands for an identifier that changes with X's updates.
   - `x.com/i/api/graphql/{ID}/HomeTimeline`: home timeline (For you)
   - `x.com/i/api/graphql/{ID}/HomeLatestTimeline`: home timeline (Following)
   - `x.com/i/api/graphql/{ID}/TweetDetail`: a post's replies and "Discover more"
