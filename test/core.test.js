@@ -253,3 +253,12 @@ test('isProblem accepts only known codes', () => {
   expect(core.isProblem({ feature: 'https://x.com/someone', step: 'entries', kind: 'Error' })).toBe(false);
   expect(core.isProblem(null)).toBe(false);
 });
+
+test('PRIVACY.md lists exactly the requests tweetmuff filters', async () => {
+  const doc = await Bun.file(new URL('../PRIVACY.md', import.meta.url)).text();
+  const section = doc.slice(doc.indexOf('**User activity**'), doc.indexOf("tweetmuff doesn't handle"));
+  const documented = [...section.matchAll(/`([A-Z]\w+)`/g)].map((m) => m[1]);
+  expect([...documented].sort()).toEqual([...core.filteredOperations].sort());
+  expect(section).toContain('`https://x.com/i/api/1.1/search/typeahead.json`');
+  expect(section).toContain('`https://x.com/i/api/1.1/mutes/keywords/list.json`');
+});

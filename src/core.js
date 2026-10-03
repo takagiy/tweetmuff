@@ -378,6 +378,7 @@
   const api = {
     normalize, keywordSource, normalizeState, compile, isEmpty, judgeText, cleanText, tweetSegments, filterPayload, fromXMuteList,
     filteredFeature, isMuteListRequest, problemOf, isProblem,
+    filteredOperations: Object.keys(GRAPHQL_FEATURES), // checked against PRIVACY.md by the tests
   };
   root.TweetmuffCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
