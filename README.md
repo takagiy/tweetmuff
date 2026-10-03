@@ -33,12 +33,12 @@ Load the cloned folder with **Load unpacked** as above.
 
 ## How it works
 
-| Part | World | Role |
-| --- | --- | --- |
-| `src/core.js` | MAIN | Keyword matching and timeline filtering. Pure logic, also used by the tests. |
-| `src/main.js` | MAIN | Hooks `XMLHttpRequest` / `fetch` at `document_start`, filters timeline responses, and imports X's mute list. Never touches X's DOM. |
-| `src/bridge.js` | ISOLATED | Syncs `chrome.storage` with the page hook. Rules are mirrored to x.com's `localStorage` so they are available at page start. |
-| `pages/` | – | Popup (enable toggle, word counts) and the options page (the word lists, extra local words). The popup never shows the words themselves. |
+| Part            | World    | Role                                                                                                                                     |
+| --------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/core.js`   | MAIN     | Keyword matching and timeline filtering. Pure logic, also used by the tests.                                                             |
+| `src/main.js`   | MAIN     | Hooks `XMLHttpRequest` / `fetch` at `document_start`, filters timeline responses, and imports X's mute list. Never touches X's DOM.      |
+| `src/bridge.js` | ISOLATED | Syncs `chrome.storage` with the page hook. Rules are mirrored to x.com's `localStorage` so they are available at page start.             |
+| `pages/`        | –        | Popup (enable toggle, word counts) and the options page (the word lists, extra local words). The popup never shows the words themselves. |
 
 ### Filtering
 
@@ -74,8 +74,25 @@ tweetmuff sends nothing anywhere. Your muted words and settings stay on your dev
 ## Development
 
 ```bash
+bun install
+```
+
+```bash
 bun test
+```
+
+```bash
 bun scripts/check-manifest.js
+```
+
+Linting uses ESLint's recommended rules, and formatting uses Prettier. `bun run check` runs both (CI runs it too), and `bun run format` fixes what can be fixed automatically.
+
+```bash
+bun run check
+```
+
+```bash
+bun run format
 ```
 
 ### Chrome Web Store
@@ -94,7 +111,7 @@ bun run store:screenshots
 
 ### CI / releases
 
-- **CI** (`.github/workflows/ci.yml`) runs the tests and the manifest check on every push to `main` and on every pull request.
+- **CI** (`.github/workflows/ci.yml`) runs the lint and format check, the tests, and the manifest check on every push to `main` and on every pull request.
 - **Release** (`.github/workflows/release.yml`) runs when a `v*` tag is pushed. It runs the tests and checks that the tag matches `manifest.json`'s `version`. Then it zips the extension files and publishes a GitHub release with that zip attached.
 
 To cut a release, bump `version` in `manifest.json`, commit, and push a matching tag. For example:

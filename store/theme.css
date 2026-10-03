@@ -3,7 +3,7 @@
 
 /* Chrome Web Store screenshots: 1280x800, full bleed, shown downscaled to 640x400, so text is set large. */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap");
 
 section {
   --ink: #0f1419;
@@ -18,14 +18,14 @@ section {
   padding: 0;
   position: relative;
   overflow: hidden;
-  font-family: Inter, 'Segoe UI', system-ui, sans-serif;
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
   color: var(--ink);
   background: #f6f9f7;
 }
 
 /* Sage arc behind the screenshot (colors from the icon) */
 section::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 500px;
   top: 50%;
@@ -33,7 +33,11 @@ section::before {
   height: 1240px;
   transform: translateY(-50%);
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 40%, var(--sage-light) 0%, var(--sage) 70%);
+  background: radial-gradient(
+    circle at 35% 40%,
+    var(--sage-light) 0%,
+    var(--sage) 70%
+  );
 }
 
 .brand {
@@ -47,7 +51,11 @@ section::before {
   font-weight: 800;
   letter-spacing: -0.02em;
 }
-.brand img { width: 56px; height: 56px; display: block; }
+.brand img {
+  width: 56px;
+  height: 56px;
+  display: block;
+}
 
 .copy {
   position: absolute;
@@ -62,7 +70,13 @@ section::before {
   font-weight: 800;
   letter-spacing: -0.03em;
 }
-.copy ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 24px; }
+.copy ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 24px;
+}
 .copy li {
   position: relative;
   padding-left: 42px;
@@ -71,16 +85,24 @@ section::before {
   color: var(--sub);
 }
 .copy li::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   top: 2px;
   width: 26px;
   height: 26px;
   border-radius: 8px;
-  background: var(--blue) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px no-repeat;
+  background: var(--blue)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 16px no-repeat;
 }
-.copy li strong { display: block; margin-bottom: 2px; font-size: 24px; font-weight: 700; color: var(--ink); }
+.copy li strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+}
 
 /* Right-hand stage */
 .stage {
@@ -93,10 +115,19 @@ section::before {
   align-items: center;
   justify-content: center;
 }
-.shadow { box-shadow: 0 32px 72px rgba(15, 20, 25, 0.22), 0 4px 14px rgba(15, 20, 25, 0.08); }
+.shadow {
+  box-shadow:
+    0 32px 72px rgba(15, 20, 25, 0.22),
+    0 4px 14px rgba(15, 20, 25, 0.08);
+}
 
 /* Popup slide: a slice of the browser toolbar with the popup hanging from the extension button */
-.toolbar-scene { width: 600px; display: flex; flex-direction: column; align-items: flex-end; }
+.toolbar-scene {
+  width: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
 .toolbar {
   width: 100%;
   height: 60px;
@@ -108,8 +139,16 @@ section::before {
   border-radius: 18px;
   background: #fff;
 }
-.toolbar .nav { display: flex; gap: 10px; }
-.toolbar .nav i { width: 12px; height: 12px; border-radius: 50%; background: #c9d2d7; }
+.toolbar .nav {
+  display: flex;
+  gap: 10px;
+}
+.toolbar .nav i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #c9d2d7;
+}
 .omnibox {
   flex: 1;
   height: 38px;
@@ -131,8 +170,16 @@ section::before {
   display: grid;
   place-items: center;
 }
-.toolbar .action img { width: 28px; height: 28px; }
-.popup { width: 480px; margin: 12px 0 0; border-radius: 14px; display: block; }
+.toolbar .action img {
+  width: 28px;
+  height: 28px;
+}
+.popup {
+  width: 480px;
+  margin: 12px 0 0;
+  border-radius: 14px;
+  display: block;
+}
 
 /* Options slide: a browser window showing the whole options page. It may rise into the header's empty right
    side; the page image is scaled to the window height so it is never cut off. */
@@ -141,7 +188,22 @@ section::before {
   overflow: hidden;
   background: #fff;
 }
-.window .toolbar { height: 52px; border-radius: 0; border-bottom: 1px solid #e6ecef; }
-.window .omnibox { height: 34px; font-size: 15px; }
-.window .omnibox b { color: var(--ink); font-weight: 600; margin-right: 10px; }
-.window .page { display: block; height: 708px; width: auto; }
+.window .toolbar {
+  height: 52px;
+  border-radius: 0;
+  border-bottom: 1px solid #e6ecef;
+}
+.window .omnibox {
+  height: 34px;
+  font-size: 15px;
+}
+.window .omnibox b {
+  color: var(--ink);
+  font-weight: 600;
+  margin-right: 10px;
+}
+.window .page {
+  display: block;
+  height: 708px;
+  width: auto;
+}

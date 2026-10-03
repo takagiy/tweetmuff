@@ -4,10 +4,18 @@
   "license": "MIT",
   "scripts": {
     "test": "bun test",
+    "lint": "eslint .",
+    "format": "prettier --write . && eslint --fix .",
+    "check": "eslint . && prettier --check .",
     "store:screenshots": "bun store/build.js"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@marp-team/marp-core": "^4.4.0",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
     "puppeteer-core": "^25.12.0"
   }
 }
