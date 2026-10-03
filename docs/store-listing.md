@@ -97,7 +97,7 @@ Chrome Web Store policy requires disclosing data that is handled locally, even i
 | Personal communications | No | Direct messages are not touched. |
 | Location | No | |
 | Web history | No | |
-| User activity | **Yes** | Hooks the requests X's web app makes on x.com and checks their URLs to find timeline responses to filter (the form's "network monitoring" example). Nothing about the requests is recorded or transmitted. |
+| User activity | **Yes** | Hooks the requests X's web app makes on x.com and checks their URLs to find a fixed list of timeline requests to filter (listed in PRIVACY.md; the form's "network monitoring" example). Nothing about the requests is recorded or transmitted. |
 
 Certifications (tick all three):
 

@@ -13,12 +13,18 @@ tweetmuff works only on x.com. It handles the data below only to filter posts an
   - Search results, and search suggestions (topics, hashtags, and events)
   - Trends and Explore news cards
   - Your muted-word list on X, when X's web app loads it (for example on Settings › Muted words). The words and their options are saved on your device (see [Stored on your device](#stored-on-your-device)).
-- **User activity**: tweetmuff watches the requests X's web app makes and checks their addresses to find the ones below. It reads only the responses to those. The requests themselves aren't recorded.
-  - `x.com/i/api/graphql/…`: timelines to filter (home, replies, search, profiles, Explore, and others)
-  - `x.com/i/api/2/…`: older timeline formats to filter, such as notifications
-  - `x.com/i/api/1.1/search/typeahead.json`: search suggestions to filter
-  - `api.x.com/graphql/…` and `api.x.com/2/…`: the same APIs on X's API host (also matched on api.twitter.com)
-  - `x.com/i/api/1.1/mutes/keywords/list.json`: your muted-word list, to import it
+- **User activity**: tweetmuff watches the requests X's web app makes and checks their addresses to find the ones below. It reads only the responses to those, and every other request is left alone. The requests themselves aren't recorded.
+  - GraphQL requests to `https://x.com/i/api/graphql/{ID}/{operation}` (the ID changes with X's updates) for these operations:
+    - Home timeline: `HomeTimeline`, `HomeLatestTimeline`
+    - Replies and "Discover more": `TweetDetail`
+    - Search results: `SearchTimeline`
+    - Profiles: `UserTweets`, `UserTweetsAndReplies`, `UserMedia`, `Likes`, `UserHighlightsTweets`, `UserArticlesTweets`, `UserOriginalsTimeline`, `UserRepliesTimeline`, `UserRepostsTimeline`, `UserPhotoTimeline`, `UserVideoTimeline`, `UserSuperFollowTweets`
+    - Lists: `ListLatestTweetsTimeline`, `ListRankedTweetsTimeline`
+    - Bookmarks: `Bookmarks`, `BookmarkFolderTimeline`, `BookmarkSearchTimeline`
+    - Explore and trends: `ExplorePage`, `ExploreSidebar`, `GenericTimelineById`
+    - Notifications: `NotificationsTimeline`
+  - `https://x.com/i/api/1.1/search/typeahead.json`: search suggestions
+  - `https://x.com/i/api/1.1/mutes/keywords/list.json`: your muted-word list, to import it
 
 tweetmuff doesn't handle health, financial or payment, authentication, personal communications, location, or web history data. It reads no passwords, auth cookies, tokens, or request headers, doesn't touch direct messages, and keeps no list of the pages you visit.
 
@@ -28,7 +34,7 @@ In the extension's storage on your device:
 
 - Your settings (on/off, "apply to accounts you follow") and the extra muted words you add on the settings page
 - The muted-word list imported from X
-- A short problem log. If part of X's data looks unexpected, tweetmuff leaves that part unfiltered and saves a fixed code such as `home/entries/TypeError`, with the extension version, how often it happened, and when. It holds no messages, posts, words, links, or account details. You can see it in the Status section of the settings page, copy it to report a problem, or clear it.
+- A short problem log. If tweetmuff can't read part of X's data, for example after X changes its format, it shows that part as X sent it, without filtering, and saves a fixed code such as `home/entries/TypeError`, with the extension version, how often it happened, and when. It holds no messages, posts, words, links, or account details. You can see it in the Status section of the settings page, copy it to report a problem, or clear it.
 
 A copy of your settings and words is also kept in x.com's site data on your device, so the filter is ready as soon as the page starts loading.
 

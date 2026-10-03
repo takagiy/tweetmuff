@@ -42,7 +42,7 @@ Load the cloned folder with **Load unpacked** as above.
 
 ### Filtering
 
-- Applies to GraphQL / v2 timeline responses: home, replies, search, profiles, notifications, lists, bookmarks, trends, and Explore news cards. It also covers search-box suggestions (topics, hashtags, and events; accounts are left alone, the same as X's own mute).
+- Applies only to a fixed list of X's API requests (listed in [PRIVACY.md](PRIVACY.md) and defined in `src/core.js`): home, replies and "Discover more", search, profiles, lists, bookmarks, notifications, trends, and Explore news cards. It also covers search-box suggestions (topics, hashtags, and events; accounts are left alone, the same as X's own mute). Any other request passes through untouched.
 - Each timeline entry is checked for every tweet inside it: the post text (including long-form note text), quoted posts, retweeted originals, link-card titles and descriptions, and article titles.
 - If any tweet in a conversation module (a reply thread) matches, the whole module is dropped, so no broken thread line is left behind. In list-style modules such as **Discover more** under a post, only the matching posts are removed. If none are left, the whole section is removed so no bare header remains.
 - Cursor entries are always kept, so infinite scroll keeps working.
@@ -109,7 +109,7 @@ git push origin v1.0.1
 
 The tests run against synthetic payloads shaped like X's timeline and mute-list responses (`test/fixtures.js`). No real account data is checked in.
 
-`test/harness/index.html` is a browser harness. Run `bun test/build-harness.js` to generate its payloads and copy the scripts, then serve `test/harness/` and open the page. It checks XHR (text and JSON), fetch, and the passive import, and that the DOM is left untouched.
+`test/harness/index.html` is a browser harness. Run `bun test/build-harness.js` to generate its payloads and copy the scripts, then `bun test/harness-server.js` and open http://localhost:8765/. It checks XHR (text and JSON) and fetch filtering, that requests off the allowlist pass through, the passive import and the problem log, own posts staying visible, and that the DOM is left untouched.
 
 ## License
 
