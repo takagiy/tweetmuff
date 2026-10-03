@@ -3,15 +3,15 @@
 (function (root) {
   'use strict';
 
-  const ASCII_WORD = /[a-z0-9_]/;
-  const URL_RE = /https?:\/\/\S+/g;
+  const ASCII_WORD_CHAR = /[a-z0-9_]/;
+  const URL_PATTERN = /https?:\/\/\S+/g;
 
-  function normalize(s) {
-    return String(s).normalize('NFKC').toLowerCase();
+  function normalize(text) {
+    return String(text).normalize('NFKC').toLowerCase();
   }
 
-  function escapeRe(s) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  function escapeRegExp(text) {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   // A keyword becomes one regex source.
@@ -19,53 +19,64 @@
   // - Edges that are ASCII word chars get word boundaries, so "cat" does not hit "category" but does hit "catで" or "#cat".
   // - Non-ASCII (e.g. Japanese) is plain substring, like X does.
   function keywordSource(keyword) {
-    const raw = String(keyword).trim();
-    if (raw.length > 2 && raw.startsWith('/') && raw.endsWith('/')) {
-      const body = raw.slice(1, -1);
-      try { new RegExp(body, 'u'); return body; } catch { return null; }
+    const trimmed = String(keyword).trim();
+    if (trimmed.length > 2 && trimmed.startsWith('/') && trimmed.endsWith('/')) {
+      const pattern = trimmed.slice(1, -1);
+      try {
+        new RegExp(pattern, 'u');
+        return pattern;
+      } catch {
+        return null;
+      }
     }
-    const k = normalize(raw);
-    if (!k) return null;
-    let src = escapeRe(k);
-    if (ASCII_WORD.test(k[0])) src = '(?<![a-z0-9_])' + src;
-    if (ASCII_WORD.test(k[k.length - 1])) src = src + '(?![a-z0-9_])';
-    return src;
+    const word = normalize(trimmed);
+    if (!word) return null;
+    let source = escapeRegExp(word);
+    if (ASCII_WORD_CHAR.test(word[0])) source = '(?<![a-z0-9_])' + source;
+    if (ASCII_WORD_CHAR.test(word[word.length - 1])) source = source + '(?![a-z0-9_])';
+    return source;
   }
 
   // Keeps only well-formed rules, so a corrupted or unexpected value drops that rule instead of throwing.
-  function normalizeRules(list) {
-    if (!Array.isArray(list)) return [];
-    const out = [];
-    for (const r of list) {
-      if (!r || typeof r.keyword !== 'string' || !r.keyword.trim()) continue;
-      const until = r.validUntil == null ? NaN : Number(r.validUntil);
-      out.push({ keyword: r.keyword, excludeFollowing: r.excludeFollowing === true, validUntil: until > 0 ? until : null });
+  function normalizeRules(rules) {
+    if (!Array.isArray(rules)) return [];
+    const valid = [];
+    for (const rule of rules) {
+      if (!rule || typeof rule.keyword !== 'string' || !rule.keyword.trim()) continue;
+      const validUntil = rule.validUntil == null ? NaN : Number(rule.validUntil);
+      valid.push({
+        keyword: rule.keyword,
+        excludeFollowing: rule.excludeFollowing === true,
+        validUntil: validUntil > 0 ? validUntil : null,
+      });
     }
-    return out;
+    return valid;
   }
 
   // The settings shape everything else relies on: { enabled, applyToFollowing, imported, local, lastSync }.
   function normalizeState(state) {
-    const s = state && typeof state === 'object' ? state : {};
+    const saved = state && typeof state === 'object' ? state : {};
     return {
-      enabled: s.enabled !== false,
-      applyToFollowing: s.applyToFollowing === true,
-      imported: normalizeRules(s.imported),
-      local: normalizeRules(s.local),
-      lastSync: Number.isFinite(s.lastSync) ? s.lastSync : 0,
+      enabled: saved.enabled !== false,
+      applyToFollowing: saved.applyToFollowing === true,
+      imported: normalizeRules(saved.imported),
+      local: normalizeRules(saved.local),
+      lastSync: Number.isFinite(saved.lastSync) ? saved.lastSync : 0,
     };
   }
 
+  // Builds the matcher: one pattern for words that always apply, one for words that skip followed accounts.
   function compile(state, now = Date.now()) {
-    const s = normalizeState(state);
+    const settings = normalizeState(state);
     const always = [];
     const unlessFollowing = [];
-    if (s.enabled) {
-      for (const r of [...s.imported, ...s.local]) {
-        if (r.validUntil && r.validUntil < now) continue;
-        const src = keywordSource(r.keyword);
-        if (!src) continue;
-        (r.excludeFollowing && !s.applyToFollowing ? unlessFollowing : always).push(src);
+    if (settings.enabled) {
+      for (const rule of [...settings.imported, ...settings.local]) {
+        if (rule.validUntil && rule.validUntil < now) continue;
+        const source = keywordSource(rule.keyword);
+        if (!source) continue;
+        if (rule.excludeFollowing && !settings.applyToFollowing) unlessFollowing.push(source);
+        else always.push(source);
       }
     }
     return { always: anyOf(always), unlessFollowing: anyOf(unlessFollowing) };
@@ -76,32 +87,32 @@
   function anyOf(sources) {
     if (!sources.length) return null;
     try {
-      return new RegExp(sources.map((src) => `(?:${src})`).join('|'), 'u');
+      return new RegExp(sources.map((source) => `(?:${source})`).join('|'), 'u');
     } catch {
-      const each = sources.map((src) => new RegExp(src, 'u'));
-      return { test: (text) => each.some((re) => re.test(text)) };
+      const patterns = sources.map((source) => new RegExp(source, 'u'));
+      return { test: (text) => patterns.some((pattern) => pattern.test(text)) };
     }
   }
 
-  function isEmpty(m) {
-    return !m.always && !m.unlessFollowing;
+  function isEmpty(matcher) {
+    return !matcher.always && !matcher.unlessFollowing;
   }
 
-  function cleanText(s) {
-    return normalize(String(s || '').replace(URL_RE, ' '));
+  function cleanText(text) {
+    return normalize(String(text || '').replace(URL_PATTERN, ' '));
   }
 
   // --- tweet extraction (GraphQL shape) ---
 
-  function unwrapTweet(r) {
-    if (!r) return null;
-    if (r.__typename === 'TweetWithVisibilityResults' && r.tweet) return r.tweet;
-    if (r.__typename === 'Tweet' || r.legacy || r.rest_id) return r;
+  function unwrapTweet(result) {
+    if (!result) return null;
+    if (result.__typename === 'TweetWithVisibilityResults' && result.tweet) return result.tweet;
+    if (result.__typename === 'Tweet' || result.legacy || result.rest_id) return result;
     return null;
   }
 
-  function tweetUser(t) {
-    return t?.core?.user_results?.result || null;
+  function tweetAuthor(tweet) {
+    return tweet?.core?.user_results?.result || null;
   }
 
   function isFollowing(user) {
@@ -109,86 +120,96 @@
     return !!(user.relationship_perspectives?.following ?? user.legacy?.following);
   }
 
-  function cardText(t) {
-    const bv = t?.card?.legacy?.binding_values;
-    if (!Array.isArray(bv)) return '';
-    const out = [];
-    for (const kv of bv) {
-      if (/^(title|description|vanity_url)$/.test(kv?.key) && kv.value?.string_value) out.push(kv.value.string_value);
+  function cardText(tweet) {
+    const bindings = tweet?.card?.legacy?.binding_values;
+    if (!Array.isArray(bindings)) return '';
+    const texts = [];
+    for (const binding of bindings) {
+      const isTextField = /^(title|description|vanity_url)$/.test(binding?.key);
+      if (isTextField && binding.value?.string_value) texts.push(binding.value.string_value);
     }
-    return out.join('\n');
+    return texts.join('\n');
   }
 
   // Each "segment" is one authored piece of text: the tweet itself, its quoted tweet, the retweeted original.
   // Following-exemption is decided per segment author.
-  function tweetSegments(t, out = [], depth = 0) {
-    t = unwrapTweet(t);
-    if (!t || depth > 4) return out;
-    const legacy = t.legacy || {};
-    const rt = legacy.retweeted_status_result?.result;
-    if (rt) {
+  function tweetSegments(tweetResult, segments = [], depth = 0) {
+    const tweet = unwrapTweet(tweetResult);
+    if (!tweet || depth > 4) return segments;
+    const legacy = tweet.legacy || {};
+    const retweeted = legacy.retweeted_status_result?.result;
+    if (retweeted) {
       // A retweet's own full_text is just "RT @x: <truncated>", the original carries the real text.
-      tweetSegments(rt, out, depth + 1);
+      tweetSegments(retweeted, segments, depth + 1);
     } else {
-      const user = tweetUser(t);
-      const parts = [
-        t.note_tweet?.note_tweet_results?.result?.text || legacy.full_text || '',
-        cardText(t),
-        t.article?.article_results?.result?.title || '',
-        t.article?.article_results?.result?.preview_text || '',
+      const author = tweetAuthor(tweet);
+      const article = tweet.article?.article_results?.result;
+      const texts = [
+        tweet.note_tweet?.note_tweet_results?.result?.text || legacy.full_text || '',
+        cardText(tweet),
+        article?.title || '',
+        article?.preview_text || '',
       ];
-      out.push({
-        userId: user?.rest_id || legacy.user_id_str,
-        following: isFollowing(user),
-        text: cleanText(parts.join('\n')),
+      segments.push({
+        userId: author?.rest_id || legacy.user_id_str,
+        following: isFollowing(author),
+        text: cleanText(texts.join('\n')),
       });
     }
-    const q = t.quoted_status_result?.result;
-    if (q) tweetSegments(q, out, depth + 1);
-    return out;
+    const quoted = tweet.quoted_status_result?.result;
+    if (quoted) tweetSegments(quoted, segments, depth + 1);
+    return segments;
   }
 
   // Whether one segment should be muted. The user's own posts never are.
-  function segmentMuted(seg, m, selfId) {
-    if (selfId && seg.userId === selfId) return false;
-    if (m.always && m.always.test(seg.text)) return true;
-    return !!(m.unlessFollowing && !seg.following && m.unlessFollowing.test(seg.text));
+  function segmentMuted(segment, matcher, selfId) {
+    if (selfId && segment.userId === selfId) return false;
+    if (matcher.always && matcher.always.test(segment.text)) return true;
+    return !!(matcher.unlessFollowing && !segment.following && matcher.unlessFollowing.test(segment.text));
   }
 
-  function judgeText(text, m) {
-    const t = cleanText(text);
-    return !!((m.always && m.always.test(t)) || (m.unlessFollowing && m.unlessFollowing.test(t)));
+  function judgeText(text, matcher) {
+    const cleaned = cleanText(text);
+    const always = matcher.always && matcher.always.test(cleaned);
+    const unlessFollowing = matcher.unlessFollowing && matcher.unlessFollowing.test(cleaned);
+    return !!(always || unlessFollowing);
   }
 
   // Non-tweet timeline items that carry their own text (trends, Explore news/event cards).
-  function itemText(o) {
-    if (o.itemType === 'TimelineTrend' || o.__typename === 'TimelineTrend') {
-      return [o.name, o.social_context?.text, o.trend_metadata?.meta_description, o.trend_metadata?.domain_context];
+  function itemTexts(item) {
+    if (item.itemType === 'TimelineTrend' || item.__typename === 'TimelineTrend') {
+      return [item.name, item.social_context?.text, item.trend_metadata?.meta_description, item.trend_metadata?.domain_context];
     }
-    if (o.itemType === 'TimelineEventSummary' || o.__typename === 'TimelineEventSummary') {
-      const p = o.promotedMetadata || {};
-      return [o.title, p.promotedTrendName, p.promotedTrendDescription];
+    if (item.itemType === 'TimelineEventSummary' || item.__typename === 'TimelineEventSummary') {
+      const promoted = item.promotedMetadata || {};
+      return [item.title, promoted.promotedTrendName, promoted.promotedTrendDescription];
     }
     return null;
   }
 
   // Walks any subtree and judges every tweet / trend / event card found in it.
-  function subtreeMuted(node, ctx) {
+  function subtreeMuted(node, context) {
     let muted = false;
-    const visit = (o, depth) => {
-      if (muted || !o || typeof o !== 'object' || depth > 40) return;
-      if (Array.isArray(o)) { for (const v of o) visit(v, depth + 1); return; }
-      if (o.tweet_results && typeof o.tweet_results === 'object') {
-        if (tweetSegments(o.tweet_results.result).some((s) => segmentMuted(s, ctx.m, ctx.selfId))) {
+    const visit = (value, depth) => {
+      if (muted || !value || typeof value !== 'object' || depth > 40) return;
+      if (Array.isArray(value)) {
+        for (const child of value) visit(child, depth + 1);
+        return;
+      }
+      if (value.tweet_results && typeof value.tweet_results === 'object') {
+        const segments = tweetSegments(value.tweet_results.result);
+        if (segments.some((segment) => segmentMuted(segment, context.matcher, context.selfId))) {
           muted = true;
           return;
         }
       }
-      const txt = itemText(o);
-      if (txt && judgeText(txt.filter(Boolean).join('\n'), ctx.m)) { muted = true; return; }
-      for (const k in o) {
-        if (k === 'tweet_results') continue;
-        visit(o[k], depth + 1);
+      const texts = itemTexts(value);
+      if (texts && judgeText(texts.filter(Boolean).join('\n'), context.matcher)) {
+        muted = true;
+        return;
+      }
+      for (const key in value) {
+        if (key !== 'tweet_results') visit(value[key], depth + 1);
       }
     };
     visit(node, 0);
@@ -197,19 +218,19 @@
 
   // Runs one step of the filter. If it throws (a response shape tweetmuff doesn't understand), that step is skipped,
   // i.e. the item is kept as X sent it, and the rest of the response is still filtered. step is one of STEPS.
-  function attempt(ctx, step, fn, fallback) {
+  function attempt(context, step, run, fallback) {
     try {
-      return fn();
-    } catch (e) {
-      ctx.onError(e, step);
+      return run();
+    } catch (error) {
+      context.onError(error, step);
       return fallback;
     }
   }
 
-  // Removes items for which muted() is true; an item that can't be judged stays.
-  function keep(ctx, step, list, muted) {
-    const kept = list.filter((item) => !attempt(ctx, step, () => muted(item), false));
-    ctx.removed += list.length - kept.length;
+  // Removes items for which isMuted() is true; an item that can't be judged stays.
+  function keep(context, step, items, isMuted) {
+    const kept = items.filter((item) => !attempt(context, step, () => isMuted(item), false));
+    context.removed += items.length - kept.length;
     return kept;
   }
 
@@ -217,89 +238,98 @@
   // in it matches; dropping just one item would leave a dangling thread line.
   // Other modules are lists of independent items ("Discover more" under a post, carousels): only the matching
   // items go, and the module goes too once it is empty so no bare header is left.
-  function entryMuted(e, ctx) {
-    if (isCursor(e)) return false;
-    const c = e?.content;
-    if (Array.isArray(c?.items) && c.items.length && !/Conversation/.test(c.displayType || '')) {
-      c.items = keep(ctx, 'entries', c.items, (it) => subtreeMuted(it, ctx));
-      return c.items.length === 0;
+  function entryMuted(entry, context) {
+    if (isCursor(entry)) return false;
+    const content = entry?.content;
+    const isList = Array.isArray(content?.items) && content.items.length && !/Conversation/.test(content.displayType || '');
+    if (isList) {
+      content.items = keep(context, 'entries', content.items, (item) => subtreeMuted(item, context));
+      return content.items.length === 0;
     }
-    return subtreeMuted(e, ctx);
+    return subtreeMuted(entry, context);
   }
 
-  function filterInstructions(instructions, ctx) {
+  function filterInstructions(instructions, context) {
     for (let i = instructions.length - 1; i >= 0; i--) {
-      const ins = instructions[i];
-      if (!ins || typeof ins !== 'object') continue;
-      if (Array.isArray(ins.entries)) ins.entries = keep(ctx, 'entries', ins.entries, (e) => entryMuted(e, ctx));
-      if (Array.isArray(ins.moduleItems)) {
-        const before = ins.moduleItems.length;
-        ins.moduleItems = keep(ctx, 'entries', ins.moduleItems, (e) => subtreeMuted(e, ctx));
-        if (!ins.moduleItems.length && before) instructions.splice(i, 1);
+      const instruction = instructions[i];
+      if (!instruction || typeof instruction !== 'object') continue;
+      if (Array.isArray(instruction.entries)) {
+        instruction.entries = keep(context, 'entries', instruction.entries, (entry) => entryMuted(entry, context));
       }
-      if (ins.entry && attempt(ctx, 'entries', () => !isCursor(ins.entry) && subtreeMuted(ins.entry, ctx), false)) {
+      if (Array.isArray(instruction.moduleItems)) {
+        const before = instruction.moduleItems.length;
+        instruction.moduleItems = keep(context, 'entries', instruction.moduleItems, (item) => subtreeMuted(item, context));
+        if (!instruction.moduleItems.length && before) instructions.splice(i, 1);
+      }
+      const singleEntry = instruction.entry;
+      if (singleEntry && attempt(context, 'entries', () => !isCursor(singleEntry) && subtreeMuted(singleEntry, context), false)) {
         instructions.splice(i, 1);
-        ctx.removed++;
+        context.removed++;
       }
     }
   }
 
-  function isCursor(e) {
-    const c = e?.content;
-    return !!(c && (c.entryType === 'TimelineTimelineCursor' || c.__typename === 'TimelineTimelineCursor' || c.cursorType));
+  function isCursor(entry) {
+    const content = entry?.content;
+    if (!content) return false;
+    return content.entryType === 'TimelineTimelineCursor' || content.__typename === 'TimelineTimelineCursor' || !!content.cursorType;
   }
 
   // Search-box suggestions (/1.1/search/typeahead.json). Users are left alone, like X's own mute.
-  function filterTypeahead(obj, ctx) {
-    if (!('num_results' in obj && 'ordered_sections' in obj)) return;
-    const before = ctx.removed;
-    for (const key of ['topics', 'hashtags', 'events']) {
-      if (!Array.isArray(obj[key])) continue;
-      obj[key] = keep(ctx, 'suggestions', obj[key], (item) => {
-        const strings = [];
-        JSON.stringify(item, (k, v) => {
-          if (typeof v === 'string' && !/url|id$|_str$/i.test(k)) strings.push(v);
-          return v;
+  function filterTypeahead(response, context) {
+    if (!('num_results' in response && 'ordered_sections' in response)) return;
+    const removedBefore = context.removed;
+    for (const section of ['topics', 'hashtags', 'events']) {
+      if (!Array.isArray(response[section])) continue;
+      response[section] = keep(context, 'suggestions', response[section], (suggestion) => {
+        const texts = [];
+        JSON.stringify(suggestion, (key, value) => {
+          if (typeof value === 'string' && !/url|id$|_str$/i.test(key)) texts.push(value);
+          return value;
         });
-        return judgeText(strings.join('\n'), ctx.m);
+        return judgeText(texts.join('\n'), context.matcher);
       });
     }
-    const removed = ctx.removed - before;
-    if (removed && typeof obj.num_results === 'number') obj.num_results -= removed;
+    const removed = context.removed - removedBefore;
+    if (removed && typeof response.num_results === 'number') response.num_results -= removed;
   }
 
-  // Mutates obj in place and returns how many entries/items were removed. A response shape it doesn't understand
-  // never makes it throw: those parts are left as X sent them, and each problem is reported to opts.onError(error, step).
-  function filterPayload(obj, m, opts = {}) {
-    if (!obj || typeof obj !== 'object' || isEmpty(m)) return 0;
-    const ctx = { m, selfId: opts.selfId || null, removed: 0, onError: opts.onError || (() => {}) };
-    attempt(ctx, 'suggestions', () => filterTypeahead(obj, ctx));
+  // Mutates the response in place and returns how many entries/items were removed. A response shape it doesn't
+  // understand never makes it throw: those parts are left as X sent them, and each problem is reported to
+  // options.onError(error, step).
+  function filterPayload(response, matcher, options = {}) {
+    if (!response || typeof response !== 'object' || isEmpty(matcher)) return 0;
+    const context = { matcher, selfId: options.selfId || null, removed: 0, onError: options.onError || (() => {}) };
+    attempt(context, 'suggestions', () => filterTypeahead(response, context));
     const seen = new Set();
-    const visit = (o, depth) => {
-      if (!o || typeof o !== 'object' || depth > 30 || seen.has(o)) return;
-      seen.add(o);
-      if (Array.isArray(o)) { for (const v of o) visit(v, depth + 1); return; }
-      for (const k in o) {
-        const v = o[k];
-        if (k === 'instructions' && Array.isArray(v)) attempt(ctx, 'entries', () => filterInstructions(v, ctx));
-        else visit(v, depth + 1);
+    const visit = (value, depth) => {
+      if (!value || typeof value !== 'object' || depth > 30 || seen.has(value)) return;
+      seen.add(value);
+      if (Array.isArray(value)) {
+        for (const child of value) visit(child, depth + 1);
+        return;
+      }
+      for (const key in value) {
+        const child = value[key];
+        if (key === 'instructions' && Array.isArray(child)) attempt(context, 'entries', () => filterInstructions(child, context));
+        else visit(child, depth + 1);
       }
     };
-    attempt(ctx, 'entries', () => visit(obj, 0));
-    return ctx.removed;
+    attempt(context, 'entries', () => visit(response, 0));
+    return context.removed;
   }
 
   // X's mute-list API -> our rule format. Returns null (keep the list already saved) when the response isn't
   // recognizable, e.g. X renamed a field, instead of replacing the user's list with nothing or with junk.
   function fromXMuteList(json) {
-    const list = json?.muted_keywords;
-    if (!Array.isArray(list)) return null;
-    const rules = normalizeRules(list.map((k) => ({
-      keyword: k?.keyword,
-      excludeFollowing: Array.isArray(k?.mute_options) && k.mute_options.includes('exclude_following_accounts'),
-      validUntil: k?.valid_until,
+    const entries = json?.muted_keywords;
+    if (!Array.isArray(entries)) return null;
+    const rules = normalizeRules(entries.map((entry) => ({
+      keyword: entry?.keyword,
+      excludeFollowing: Array.isArray(entry?.mute_options) && entry.mute_options.includes('exclude_following_accounts'),
+      validUntil: entry?.valid_until,
     })));
-    return list.length && !rules.length ? null : rules;
+    return entries.length && !rules.length ? null : rules;
   }
 
   // --- problem log (shown on the options page's Status section) ---
@@ -341,25 +371,33 @@
     NotificationsTimeline: 'notifications',
   };
   const REST_FEATURES = { '/i/api/1.1/search/typeahead.json': 'suggestions' };
+  const MUTE_LIST_PATH = '/i/api/1.1/mutes/keywords/list.json';
+
+  // Parses a request URL relative to x.com; null if it isn't a valid URL.
+  function parseRequestUrl(url) {
+    try {
+      return new URL(String(url), 'https://x.com');
+    } catch {
+      return null;
+    }
+  }
 
   // The feature (an id from FEATURES) a request is filtered for, or null if tweetmuff leaves it alone.
   function filteredFeature(url) {
-    let u;
-    try { u = new URL(String(url), 'https://x.com'); } catch { return null; }
-    if (u.hostname !== 'x.com') return null;
-    const op = (u.pathname.match(/^\/i\/api\/graphql\/[\w-]+\/(\w+)$/) || [])[1];
-    if (op) return Object.hasOwn(GRAPHQL_FEATURES, op) ? GRAPHQL_FEATURES[op] : null;
-    return Object.hasOwn(REST_FEATURES, u.pathname) ? REST_FEATURES[u.pathname] : null;
+    const parsed = parseRequestUrl(url);
+    if (!parsed || parsed.hostname !== 'x.com') return null;
+    const graphql = parsed.pathname.match(/^\/i\/api\/graphql\/[\w-]+\/(\w+)$/);
+    if (graphql) {
+      const operation = graphql[1];
+      return Object.hasOwn(GRAPHQL_FEATURES, operation) ? GRAPHQL_FEATURES[operation] : null;
+    }
+    return Object.hasOwn(REST_FEATURES, parsed.pathname) ? REST_FEATURES[parsed.pathname] : null;
   }
 
   // X's own request for the user's muted-word list, whose response tweetmuff reads to import the list.
   function isMuteListRequest(url) {
-    try {
-      const u = new URL(String(url), 'https://x.com');
-      return u.hostname === 'x.com' && u.pathname === '/i/api/1.1/mutes/keywords/list.json';
-    } catch {
-      return false;
-    }
+    const parsed = parseRequestUrl(url);
+    return !!parsed && parsed.hostname === 'x.com' && parsed.pathname === MUTE_LIST_PATH;
   }
 
   // Reduces an error to { feature, step, kind } codes; the error's message is never looked at.
@@ -371,8 +409,8 @@
     };
   }
 
-  function isProblem(p) {
-    return !!p && FEATURES.includes(p.feature) && STEPS.includes(p.step) && KINDS.includes(p.kind);
+  function isProblem(problem) {
+    return !!problem && FEATURES.includes(problem.feature) && STEPS.includes(problem.step) && KINDS.includes(problem.kind);
   }
 
   const api = {

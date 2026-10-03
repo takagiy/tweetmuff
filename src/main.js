@@ -11,28 +11,28 @@
 
   const STATE_KEY = 'tweetmuff:state';
 
-  // Each distinct problem is reported once per page: a console note for whoever is debugging locally, plus fixed codes
-  // ({ feature, step, kind }, no message or data) the bridge keeps for the options page's Status section.
-  const reported = new Set();
-  function report(e, feature, step) {
+  // Each distinct problem is reported once per page: a console note for whoever is debugging locally, plus fixed error
+  // codes ({ feature, step, kind }, no message or data) the bridge keeps for the options page's Status section.
+  const reportedProblems = new Set();
+  function report(error, feature, step) {
     try {
-      const problem = core.problemOf(e, feature, step);
-      const key = `${problem.feature}/${problem.step}/${problem.kind}`;
-      if (reported.has(key)) return;
-      reported.add(key);
-      console.warn(`[tweetmuff] ${key}: left part of X's data unfiltered because it looked unexpected.`, e);
-      emit('tweetmuff:problem', problem);
+      const problem = core.problemOf(error, feature, step);
+      const code = `${problem.feature}/${problem.step}/${problem.kind}`;
+      if (reportedProblems.has(code)) return;
+      reportedProblems.add(code);
+      console.warn(`[tweetmuff] ${code}: left part of X's data unfiltered because it looked unexpected.`, error);
+      sendToBridge('tweetmuff:problem', problem);
     } catch {}
   }
 
-  // ---------- state (written by the isolated-world bridge into localStorage) ----------
+  // ---------- settings (written by the isolated-world bridge into localStorage) ----------
   let matcher = core.compile(null);
 
-  function loadState() {
+  function loadSettings() {
     try {
       matcher = core.compile(JSON.parse(localStorage.getItem(STATE_KEY) || 'null'));
-    } catch (e) {
-      report(e, 'settings', 'settings');
+    } catch (error) {
+      report(error, 'settings', 'settings');
     }
   }
 
@@ -41,135 +41,160 @@
   let selfId = null;
   async function readSelfId() {
     try {
-      const c = await window.cookieStore?.get('twid');
-      const v = c ? decodeURIComponent(c.value).replace(/^"|"$/g, '') : '';
-      selfId = (v.match(/u=(\d+)/) || [])[1] || null;
+      const cookie = await window.cookieStore?.get('twid');
+      const value = cookie ? decodeURIComponent(cookie.value).replace(/^"|"$/g, '') : '';
+      const match = value.match(/u=(\d+)/);
+      selfId = match ? match[1] : null;
     } catch {
       selfId = null;
     }
   }
   readSelfId();
   try {
-    window.cookieStore?.addEventListener('change', (e) => {
-      if ([...e.changed, ...e.deleted].some((c) => c.name === 'twid')) readSelfId(); // signed out or switched accounts
+    // Signed out or switched accounts.
+    window.cookieStore?.addEventListener('change', (event) => {
+      const changed = [...event.changed, ...event.deleted];
+      if (changed.some((cookie) => cookie.name === 'twid')) readSelfId();
     });
   } catch {}
 
   // ---------- response filtering (only the requests listed in core's GRAPHQL_FEATURES / REST_FEATURES) ----------
-  function filterObj(obj, feature) {
+
+  // Filters a parsed response in place; returns how many items were removed.
+  function filterResponse(response, feature) {
     if (core.isEmpty(matcher)) return 0;
-    const onError = (e, step = 'response') => report(e, feature, step);
+    const onError = (error, step = 'response') => report(error, feature, step);
     try {
-      return core.filterPayload(obj, matcher, { selfId, onError });
-    } catch (e) {
-      onError(e);
+      return core.filterPayload(response, matcher, { selfId, onError });
+    } catch (error) {
+      onError(error);
       return 0;
     }
   }
 
   // Returns the filtered JSON text, or the original text whenever it isn't JSON or nothing was removed.
-  function filterText(text, feature) {
+  function filterResponseText(text, feature) {
     if (core.isEmpty(matcher) || typeof text !== 'string' || !text || text[0] !== '{') return text;
-    let obj;
-    try { obj = JSON.parse(text); } catch { return text; }
-    return filterObj(obj, feature) ? JSON.stringify(obj) : text;
+    let response;
+    try {
+      response = JSON.parse(text);
+    } catch {
+      return text;
+    }
+    return filterResponse(response, feature) ? JSON.stringify(response) : text;
   }
 
   // ---------- XMLHttpRequest ----------
-  const XP = XMLHttpRequest.prototype;
-  const origOpen = XP.open;
-  const textDesc = Object.getOwnPropertyDescriptor(XP, 'responseText');
-  const respDesc = Object.getOwnPropertyDescriptor(XP, 'response');
-  const META = Symbol('tweetmuff');
+  const xhrPrototype = XMLHttpRequest.prototype;
+  const originalOpen = xhrPrototype.open;
+  const responseTextProperty = Object.getOwnPropertyDescriptor(xhrPrototype, 'responseText');
+  const responseProperty = Object.getOwnPropertyDescriptor(xhrPrototype, 'response');
+  const REQUEST_INFO = Symbol('tweetmuff');
 
-  XP.open = function (method, url) {
+  xhrPrototype.open = function (method, url) {
     try {
-      this[META] = { feature: core.filteredFeature(url), raw: undefined, out: undefined };
+      // original/filtered cache the result so every read of the response returns the same value.
+      this[REQUEST_INFO] = { feature: core.filteredFeature(url), original: undefined, filtered: undefined };
       if (core.isMuteListRequest(url)) {
         this.addEventListener('load', () => {
           if (this.status !== 200) return;
           let json;
-          try { json = JSON.parse(textDesc.get.call(this)); } catch { return; }
-          importFromJson(json);
+          try {
+            json = JSON.parse(responseTextProperty.get.call(this));
+          } catch {
+            return;
+          }
+          importMuteList(json);
         });
       }
-    } catch (e) {
-      report(e, 'network', 'hook');
+    } catch (error) {
+      report(error, 'network', 'hook');
     }
-    return origOpen.apply(this, arguments);
+    return originalOpen.apply(this, arguments);
   };
 
-  function filtered(xhr, raw) {
+  function filteredXhrResponse(xhr, original) {
     try {
-      const meta = xhr[META];
-      if (!meta || !meta.feature || xhr.readyState !== 4) return raw;
-      if (meta.raw === raw && meta.out !== undefined) return meta.out;
-      let out = raw;
-      if (typeof raw === 'string') {
-        out = filterText(raw, meta.feature);
-      } else if (raw && Object.getPrototypeOf(raw) === Object.prototype) {
+      const info = xhr[REQUEST_INFO];
+      if (!info || !info.feature || xhr.readyState !== 4) return original;
+      if (info.original === original && info.filtered !== undefined) return info.filtered;
+      let filtered = original;
+      if (typeof original === 'string') {
+        filtered = filterResponseText(original, info.feature);
+      } else if (original && Object.getPrototypeOf(original) === Object.prototype) {
         // responseType 'json': filter a copy, so X's own object is never left half-edited.
-        const copy = structuredClone(raw);
-        if (filterObj(copy, meta.feature)) out = copy;
+        const copy = structuredClone(original);
+        if (filterResponse(copy, info.feature)) filtered = copy;
       }
-      meta.raw = raw;
-      meta.out = out;
-      return out;
-    } catch (e) {
-      report(e, xhr[META]?.feature, 'response');
-      return raw;
+      info.original = original;
+      info.filtered = filtered;
+      return filtered;
+    } catch (error) {
+      report(error, xhr[REQUEST_INFO]?.feature, 'response');
+      return original;
     }
   }
 
-  Object.defineProperty(XP, 'responseText', {
-    configurable: true, enumerable: textDesc.enumerable,
-    get() { return filtered(this, textDesc.get.call(this)); },
+  Object.defineProperty(xhrPrototype, 'responseText', {
+    configurable: true,
+    enumerable: responseTextProperty.enumerable,
+    get() {
+      return filteredXhrResponse(this, responseTextProperty.get.call(this));
+    },
   });
-  Object.defineProperty(XP, 'response', {
-    configurable: true, enumerable: respDesc.enumerable,
-    get() { return filtered(this, respDesc.get.call(this)); },
+  Object.defineProperty(xhrPrototype, 'response', {
+    configurable: true,
+    enumerable: responseProperty.enumerable,
+    get() {
+      return filteredXhrResponse(this, responseProperty.get.call(this));
+    },
   });
 
   // ---------- fetch ----------
-  const origFetch = window.fetch;
+  const originalFetch = window.fetch;
   window.fetch = async function (input) {
-    const res = await origFetch.apply(this, arguments);
+    const response = await originalFetch.apply(this, arguments);
     let feature = null;
     try {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input?.url || '';
-      if (core.isMuteListRequest(url) && res.ok) res.clone().json().then(importFromJson, () => {});
+      let url = '';
+      if (typeof input === 'string') url = input;
+      else if (input instanceof URL) url = input.href;
+      else if (input?.url) url = input.url;
+
+      if (core.isMuteListRequest(url) && response.ok) response.clone().json().then(importMuteList, () => {});
       feature = core.filteredFeature(url);
-      if (!feature || core.isEmpty(matcher) || !res.ok) return res;
-      if (!(res.headers.get('content-type') || '').includes('json')) return res;
+      if (!feature || core.isEmpty(matcher) || !response.ok) return response;
+      if (!(response.headers.get('content-type') || '').includes('json')) return response;
+
       // Read a clone, so the original response is still intact to hand back if anything goes wrong.
-      const text = await res.clone().text();
-      const out = filterText(text, feature);
-      if (out === text) return res;
-      const r2 = new Response(out, { status: res.status, statusText: res.statusText, headers: res.headers });
-      Object.defineProperty(r2, 'url', { value: res.url });
-      return r2;
-    } catch (e) {
-      report(e, feature, 'response');
-      return res;
+      const text = await response.clone().text();
+      const filteredText = filterResponseText(text, feature);
+      if (filteredText === text) return response;
+      const filtered = new Response(filteredText, { status: response.status, statusText: response.statusText, headers: response.headers });
+      Object.defineProperty(filtered, 'url', { value: response.url });
+      return filtered;
+    } catch (error) {
+      report(error, feature, 'response');
+      return response;
     }
   };
 
   // ---------- import of X's own mute settings ----------
-  function emit(name, detail) {
-    document.dispatchEvent(new CustomEvent(name, { detail: JSON.stringify(detail) }));
+  function sendToBridge(eventName, detail) {
+    document.dispatchEvent(new CustomEvent(eventName, { detail: JSON.stringify(detail) }));
   }
 
-  function importFromJson(json) {
+  function importMuteList(json) {
     try {
       const rules = core.fromXMuteList(json);
-      if (rules) emit('tweetmuff:imported', { rules, at: Date.now() });
+      if (rules) sendToBridge('tweetmuff:imported', { rules, at: Date.now() });
       else report({ name: 'UnknownFormat' }, 'import', 'format'); // the saved list was kept
-    } catch (e) {
-      report(e, 'import', 'import');
+    } catch (error) {
+      report(error, 'import', 'import');
     }
   }
 
   // ---------- init ----------
-  loadState();
-  document.addEventListener('tweetmuff:state', loadState);
+  loadSettings();
+  document.addEventListener('tweetmuff:state', loadSettings);
 })();
