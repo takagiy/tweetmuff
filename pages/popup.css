@@ -1,2 +1,7 @@
-body { width: 320px; padding: 12px 16px 16px; }
-.hint { margin: 10px 0 0; }
+body {
+  width: 320px;
+  padding: 12px 16px 16px;
+}
+.hint {
+  margin: 10px 0 0;
+}
