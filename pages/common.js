@@ -1,7 +1,10 @@
 // Shared by the popup and the options page. Loaded after src/core.js.
 'use strict';
-const X_MUTE_SETTINGS = 'https://x.com/settings/muted_keywords';
-const $ = (id) => document.getElementById(id);
+const X_MUTE_SETTINGS_URL = 'https://x.com/settings/muted_keywords';
+
+function byId(id) {
+  return document.getElementById(id);
+}
 
 // Always the expected shape, even if what's stored is damaged, so the pages still render.
 async function getState() {
@@ -9,37 +12,37 @@ async function getState() {
   return TweetmuffCore.normalizeState(state);
 }
 
-async function update(patch) {
-  await chrome.storage.local.set({ state: { ...(await getState()), ...patch } });
+async function updateState(changes) {
+  const state = await getState();
+  await chrome.storage.local.set({ state: { ...state, ...changes } });
 }
 
 function onStateChange(render) {
-  chrome.storage.onChanged.addListener((c, area) => {
-    if (area === 'local' && c.state) render(TweetmuffCore.normalizeState(c.state.newValue));
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.state) render(TweetmuffCore.normalizeState(changes.state.newValue));
   });
   getState().then(render);
 }
 
-function fmtTime(t) {
-  return t ? new Date(t).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : '';
+function formatTime(timestamp) {
+  return timestamp ? new Date(timestamp).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : '';
 }
 
-function count(n, word) {
-  return `${n} ${word}${n === 1 ? '' : 's'}`;
+function pluralize(count, word) {
+  return `${count} ${word}${count === 1 ? '' : 's'}`;
 }
 
-function syncStatus(s) {
-  return s.lastSync
-    ? `${count(s.imported.length, 'word')} from X, synced ${fmtTime(s.lastSync)}`
-    : "Not synced yet. Open X's muted words settings once to import them.";
+function syncStatus(state) {
+  if (!state.lastSync) return "Not synced yet. Open X's muted words settings once to import them.";
+  return `${pluralize(state.imported.length, 'word')} from X, synced ${formatTime(state.lastSync)}`;
 }
 
-// Two-way binding for a checkbox backed by a boolean state field.
-function bindCheckbox(id, key) {
-  $(id).addEventListener('change', (e) => update({ [key]: e.target.checked }));
+// Saves a checkbox to the boolean setting with the given name whenever it's toggled.
+function bindCheckbox(id, settingName) {
+  byId(id).addEventListener('change', (event) => updateState({ [settingName]: event.target.checked }));
 }
 
 // X loads the list itself on this page; tweetmuff only reads that response.
 function openXMuteSettings() {
-  chrome.tabs.create({ url: X_MUTE_SETTINGS });
+  chrome.tabs.create({ url: X_MUTE_SETTINGS_URL });
 }
