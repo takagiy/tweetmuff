@@ -69,7 +69,7 @@ Load the cloned folder with **Load unpacked** as above.
 
 ## Privacy
 
-tweetmuff sends nothing anywhere. Your muted words and settings stay on your device. See [PRIVACY.md](PRIVACY.md).
+tweetmuff sends nothing anywhere. Your muted words and settings stay in your browser. See [PRIVACY.md](PRIVACY.md).
 
 ## Development
 
