@@ -44,7 +44,7 @@ tweetmuff works only on x.com. It handles the data below only to filter posts an
 
 tweetmuff doesn't handle health, financial or payment, authentication, personal communications, location, or web history data. It reads no passwords, auth cookies, tokens, or request headers, doesn't touch direct messages, and keeps no list of the pages you visit.
 
-## Stored in your browser
+## Stored on your device
 
 In the extension's storage in your browser:
 
