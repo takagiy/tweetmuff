@@ -68,7 +68,7 @@ The dashboard asks for a justification for each permission and for host access.
 `storage`:
 
 ```
-Stores the user's settings and muted-word list (imported from the user's own X mute settings, plus any words added on the settings page) locally in the browser, so the filter keeps working across browser sessions. It also keeps a short log of problems the filter ran into, recorded only as fixed codes (affected feature, step, error type, extension version, count, and date). The log contains no page content or any other data, and is shown in the Status section of the settings page.
+Stores the user's settings and muted-word list (imported from the user's own X mute settings, plus any words added on the settings page) locally in the browser, so the filter keeps working across browser sessions. It also keeps a short log of problems the filter ran into, recorded only as fixed error codes (affected feature, step, and error type), with the extension version, count, and date. The log contains no page content or any other data, and is shown in the Status section of the settings page.
 ```
 
 Host access (content scripts on `https://x.com/*`):
